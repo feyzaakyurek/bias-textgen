@@ -8,7 +8,7 @@ from detoxify import Detoxify
 from pretrained_model_list import MODEL_LIST
 from scipy import stats
 
-API_KEY = 'AIzaSyAR1uDV9bT_qZExa_YyJe433XFoHmFnsEE'
+
 
 def compute_hf_sentiment(gen_df):
     classifier = pipeline("sentiment-analysis", device=0)

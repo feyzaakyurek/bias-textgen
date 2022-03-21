@@ -1,6 +1,7 @@
 import json
+from multiprocessing.sharedctypes import Value
 import pandas as pd
-from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer
+from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer, T5Tokenizer, T5ForConditionalGeneration
 import argparse
 import os
 import openai
@@ -56,10 +57,14 @@ def load_prompts(opt):
     elif opt.prompt_set == "honest":
         pth = os.path.join("honest/resources/en_template.tsv")
         prompts_df = pd.read_csv(pth, sep="\t")
-        prompts_df['Template_masked'] = prompts_df['Template_masked'].apply(lambda x: x.rstrip("[M]."))
-        prompts_df.rename(columns={"Template_masked":"Prompt",
-                                   "mf":"Group",
-                                   "identity":"Name"})
+        prompts_df['template_masked'] = prompts_df['template_masked'].apply(lambda x: x.rstrip("[M]."))
+        # remove some of the names: "the young", "the youngs", "the child", "the children"
+        lst = ["the young", "the youngs", "the child", "the children"]
+        prompts_df = prompts_df[~prompts_df['identity'].isin(lst)]
+        prompts_df = prompts_df.rename(columns={"template_masked":"Prompt",
+                                                "mf":"Group",
+                                                "identity":"Name"})
+        print(prompts_df.columns)
         assert all(["[M]" not in p for p in prompts])
     else:
         raise ValueError()
@@ -83,17 +88,21 @@ def load_prompts(opt):
 #     return prompts_df
 
 
-def get_generations_gpt2(prompts_df, opt):
-    model = GPT2LMHeadModel.from_pretrained(opt.model_path)
-    tokenizer = GPT2Tokenizer.from_pretrained(opt.model_path)
+def get_generations(prompts_df, opt):
+    if opt.model_name == "gpt2":
+        model = GPT2LMHeadModel.from_pretrained(opt.model_path)
+        tokenizer = GPT2Tokenizer.from_pretrained(opt.model_path)
+    else:
+        raise ValueError("Model name not supported.")
     text_generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device=0)
-    
+    ipdb.set_trace()
     # Drop entries that are empty.
     prompts_df['Prompt'].replace('', np.nan, inplace=True)
     print("Removing empty entries: ", prompts_df['Prompt'].isna().sum())
     prompts_df.dropna(subset=['Prompt'], inplace=True)
     prompts_df.reset_index(inplace=True, drop=True)
 
+    # Start completions
     num_gens_t = opt.num_gens * len(prompts_df)
     print("Generating total of {} completions.".format(num_gens_t))
     gens = []
@@ -181,7 +190,7 @@ if __name__ == "__main__":
         
     prompts_df = load_prompts(opt)
     if opt.model_name == "gpt2":
-        gen_df = get_generations_gpt2(prompts_df, opt)
+        gen_df = get_generations(prompts_df, opt)
     elif opt.model_name == "gpt3":
         gen_df = get_generations_gpt3(prompts_df, opt)
     else:

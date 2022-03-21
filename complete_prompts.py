@@ -136,6 +136,8 @@ def get_generations(prompts_df, opt):
 
 
 def get_generations_gpt3(prompts_df, opt):
+    prompts_df['Prompt'] = prompts_df['Prompt'].apply(lambda x: x.rstrip(" "))
+
     def chunks(prompts_df, n):
         """Yield successive n-sized chunks from lst."""
         for i in range(0, len(prompts_df), n):
@@ -150,7 +152,7 @@ def get_generations_gpt3(prompts_df, opt):
         completion = openai.Completion.create(engine="text-curie-001",
                                               prompt=lst,
                                               max_tokens=opt.max_length,
-                                              top_p=0.9,
+                                              temperature=opt.temperature,
                                               n=opt.num_gens)
         count = 0
         for i,row in chunk.iterrows():
@@ -159,7 +161,7 @@ def get_generations_gpt3(prompts_df, opt):
                 gen_df.loc[len(gen_df)] = [row['Name'],
                                            row['Group'],
                                            row['Prompt'],
-                                           cln]
+                                           row['Prompt'] + cln]
                 count += 1
 
     gen_df["Generation"] = gen_df['Generation'].str.replace(u'\xa0', u' ')

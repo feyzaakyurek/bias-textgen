@@ -130,9 +130,9 @@ if __name__ == "__main__":
     if opt.regard:
         gen_df = compute_regard(gen_df, opt)
     else:
-        # gen_df = compute_vader(gen_df)
-        # gen_df = compute_tox_detoxify(gen_df)
-        gen_df = compute_hf_sentiment(gen_df)
+        gen_df = compute_vader(gen_df)
+        gen_df = compute_tox_detoxify(gen_df)
+        # gen_df = compute_hf_sentiment(gen_df)
         # gen_df = compute_tox_pespective(gen_df)
     
     if opt.summarize:

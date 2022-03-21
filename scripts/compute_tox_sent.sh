@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:volta:1
-#SBATCH --array=1-1
+#SBATCH --array=1-5
 #SBATCH --output=dumped/%A_%a.out
 #SBATCH --error=dumped/%A_%a.err
 #SBATCH --job-name=bias-toxsent
@@ -14,11 +14,11 @@
 PTH="/home/gridsan/akyurek/git/bias-textgen"
 
 cnt=0
-for MAXLEN in 20; do
+for MAXLEN in 10 20 30 40 50; do
 for NUMGEN in 20 ; do
-for PROMPTSET in "bold"; do
+for PROMPTSET in "honest"; do
 for DOMAIN in "gender"; do
-for TEMP in 1; do
+for TEMP in 1.0; do
 # for CONSIDER in all worst1 worst5; do
 (( cnt++ ))
 if [[ $cnt -eq $SLURM_ARRAY_TASK_ID ]]; then
@@ -27,7 +27,7 @@ if [[ $cnt -eq $SLURM_ARRAY_TASK_ID ]]; then
     mkdir -p $EXPFOLDER
     EXPNAME="len_${MAXLEN}_num_${NUMGEN}_temp_${TEMP}" # _temp_${TEMP} fix temp
 
-    python compute_tox_sent.py --test_file $EXPFOLDER/${EXPNAME}_sent_tox.csv \
+    python compute_tox_sent.py --test_file $EXPFOLDER/${EXPNAME}_gens.csv \
                                --save_path $EXPFOLDER \
                                --prompt_set $PROMPTSET \
                                --prompt_domain $DOMAIN \

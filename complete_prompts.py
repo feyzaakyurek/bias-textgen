@@ -4,10 +4,11 @@ from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer
 import argparse
 import os
 import openai
+import numpy as np
 # from pretrained_model_list import MODEL_PATH_LIST
 # import promptsource.templates
 from tqdm import tqdm
-
+import ipdb
 
 def clean_up_tokenization(out_string: str) -> str:
     """
@@ -49,7 +50,8 @@ def load_prompts(opt):
         for group, content in prompts.items():
             for name, prompt_l in content.items():
                 for prompt in prompt_l:
-                    prompts_df.loc[len(prompts_df)] = [name, group, prompt]
+                    if prompt.strip != "":
+                        prompts_df.loc[len(prompts_df)] = [name, group, prompt]
 
     elif opt.prompt_set == "honest":
         pth = os.path.join("honest/resources/en_template.tsv")
@@ -82,21 +84,36 @@ def load_prompts(opt):
 
 
 def get_generations_gpt2(prompts_df, opt):
-    prompts_df = prompts_df.loc[:20]
     model = GPT2LMHeadModel.from_pretrained(opt.model_path)
     tokenizer = GPT2Tokenizer.from_pretrained(opt.model_path)
     text_generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device=0)
-        
+    
+    # Drop entries that are empty.
+    prompts_df['Prompt'].replace('', np.nan, inplace=True)
+    print("Removing empty entries: ", prompts_df['Prompt'].isna().sum())
+    prompts_df.dropna(subset=['Prompt'], inplace=True)
+    prompts_df.reset_index(inplace=True, drop=True)
+
     num_gens_t = opt.num_gens * len(prompts_df)
     print("Generating total of {} completions.".format(num_gens_t))
-    gens = text_generator(prompts_df.Prompt.to_list(),
-                          max_new_tokens=opt.max_length,
-                          do_sample=opt.do_sample,
-                          temperature=opt.temperature,
-                          num_return_sequences=opt.num_gens,
-                          clean_up_tokenization_spaces=True)
-    
-    print("Generation completed.")
+    gens = []
+    empty_count = 0
+    for prompt in prompts_df.Prompt.to_list():
+        try:
+            gen = text_generator(prompt,
+                                max_new_tokens=opt.max_length,
+                                do_sample=opt.do_sample,
+                                temperature=opt.temperature,
+                                num_return_sequences=opt.num_gens,
+                                clean_up_tokenization_spaces=True)
+            gens.append(gen)
+        except:
+            print("FAILED: ", prompt)
+            gen = [{"generated_text":"."}] * opt.num_gens
+            gens.append(gen)
+            empty_count +=1
+    print("Generation completed. Empty prompt number: ", empty_count)
+
     gen_df = pd.DataFrame(columns = ["Name", "Group", "Prompt", "Generation"])
     for i,row in prompts_df.loc[:].iterrows():
         genset = gens[i]
@@ -169,6 +186,7 @@ if __name__ == "__main__":
         gen_df = get_generations_gpt3(prompts_df, opt)
     else:
         raise ValueError(f"{opt.model_name} is not known.")
+    
     pth = os.path.join(opt.save_path,
-                       "len_{}_num_{}_gens.csv".format(opt.max_length, opt.num_gens))
+                       "len_{}_num_{}_temp_{}_gens.csv".format(opt.max_length, opt.num_gens, opt.temperature))
     gen_df.to_csv(pth)

@@ -1,10 +1,7 @@
 import json
-from multiprocessing.sharedctypes import Value
 import pandas as pd
-from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer, T5Tokenizer, T5ForConditionalGeneration
 import argparse
 import os
-import openai
 import numpy as np
 # from pretrained_model_list import MODEL_PATH_LIST
 # import promptsource.templates
@@ -90,6 +87,8 @@ def load_prompts(opt):
 
 def get_generations(prompts_df, opt):
     if opt.model_name == "gpt2":
+        from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer
+
         model = GPT2LMHeadModel.from_pretrained(opt.model_path)
         tokenizer = GPT2Tokenizer.from_pretrained(opt.model_path)
     else:
@@ -136,6 +135,7 @@ def get_generations(prompts_df, opt):
 
 
 def get_generations_gpt3(prompts_df, opt):
+    import openai
     prompts_df['Prompt'] = prompts_df['Prompt'].apply(lambda x: x.rstrip(" "))
 
     def chunks(prompts_df, n):

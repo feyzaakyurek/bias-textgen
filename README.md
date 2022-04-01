@@ -16,6 +16,9 @@ https://github.com/MilaNLProc/honest
 https://github.com/amazon-research/bold (Create a folder data/ and place bold under data.)
 ```
 
+Standard pipeline:
+Scripts are available under `scripts/`. We first complete prompts by calling `complete_prompts.py` and then compute defining metrics using `compute_tox_sent.py`. In the latter, comment out the metrics that you are not interested in which is important because computing regard requires a different running environment.
+
 Other requirements:
 - To create completions given prompts, download respective models from huggingface/transformers e.g.
 ```
